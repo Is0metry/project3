@@ -1,0 +1,6 @@
+env.py
+.vscode/*
+__pycache__/*
+data/*
+.DS_STORE
+wip_*

@@ -1,0 +1,92 @@
+from env import HOST,USERNAME,PASSWORD
+from typing import Union
+import numpy as np
+import pandas as pd
+import os
+def get_zillow_url()->str:
+    '''
+    returns URL for `zillow` database.
+    # Parameters
+    None
+    # Returns
+    Returns a formatted pymysql URL with the `HOST`, `USERNAME`, and `PASSWORD` imported from env.py using `zillow` database.
+    '''
+    return f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/zillow'
+
+def get_zillow_from_sql()->pd.DataFrame:
+    '''
+    reads MySQL data from `zillow` database and returns `pandas.DataFrame` with raw data from query
+    # Parameters
+    None
+    # Returns
+    parsed DataFrame containing raw data from `zillow` database.
+    '''
+    query = '''
+    SELECT taxvaluedollarcnt AS tax_value,
+        bedroomcnt AS bed_count, 
+        bathroomcnt AS bath_count, 
+        fullbathcnt AS full_baths,
+        calculatedfinishedsquarefeet AS calc_sqft,
+        yearbuilt AS year_built,
+        fips
+        FROM properties_2017
+        JOIN predictions_2017 USING(parcelid)
+        JOIN propertylandusetype USING(propertylandusetypeid)
+        WHERE propertylandusedesc= "Single Family Residential"'''
+    return pd.read_sql(query,get_zillow_url())
+def df_from_csv(path:str)->Union[pd.DataFrame,None]:
+    '''
+    returns zillow DataFrame from .csv if it exists at `path`, otherwise returns None
+    # Parameters
+    path: string with path to .csv file
+    # Returns
+    `pd.DataFrame` if file exists at `path`, otherwise returns `None`.
+    '''
+    if os.path.exists(path):
+        return pd.read_csv(path)
+    else:
+        return None
+def wrangle_zillow(refresh=False)->pd.DataFrame:
+    '''
+    wrangles Zillow data from either a MySQL query or a `.csv` file, prepares the  (if necessary), and returns a `pandas.DataFrame` object
+    containing the prepared Zillow data. If data is acquired from MySQL, return `DataFrame` is also encoded to `.csv` in both prepared and
+    unprepared states
+    ## Parameters
+    refresh: if `True`, ignores any `.csv` files and pulls new data from the SQL database. default=False 
+    ## Return
+    parsed and prepared `pandas.DataFrame` with Zillow data from 2017.
+    '''
+    #aquire Zillow data from .csv if exists
+    df = None
+    if not refresh:
+        df = df_from_csv('data/prepared_zillow.csv')
+        if df is not None:
+            return df
+        df = df_from_csv('data/zillow.csv')
+    if df is None:
+        #acquire zillow data from MySQL and caches to data/zillow.csv
+        df = get_zillow_from_sql()
+        df.to_csv('data/zillow.csv',index_label=False)
+ # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
+    df = df[df.bed_count > 0]
+    df = df[df.bath_count > 0]
+    df = df.dropna(subset=['tax_value','calc_sqft','year_built'])
+    # Fill values where full_bath is NaN with number of whole baths
+    # Done because none of these houses have 3/4 baths, and no information is available on full baths
+    df = df.reset_index(drop=True)
+    na_bath = df[df.full_baths.isna()].index
+    df.iloc[na_bath,3] = np.floor(df.iloc[na_bath,2])
+    #set bath_count to be half_bath_count
+    df.bath_count = (df.bath_count-df.full_baths) * 2
+    df = df.rename(columns={'bath_count':'half_baths'})
+    # df.half_baths = df.half_baths.astype(int)
+    df.full_baths = df.full_baths.astype(int)
+    df.half_baths = df.half_baths.astype(int)
+    df.bed_count = df.bed_count.astype(int)
+    df.year_built = df.year_built.astype(int)
+    df.fips = df.fips.astype(int)
+    
+    return df
+if __name__ == "__main__":
+    df = wrangle_zillow()
+    print(df.info())
