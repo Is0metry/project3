@@ -3,6 +3,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import os
+from sklearn.model_selection import train_test_split
 def get_zillow_url()->str:
     '''
     returns URL for `zillow` database.
@@ -58,15 +59,18 @@ def wrangle_zillow(refresh=False)->pd.DataFrame:
     '''
     #aquire Zillow data from .csv if exists
     df = None
+    prepped_flag = False
     if not refresh:
         df = df_from_csv('data/prepared_zillow.csv')
         if df is not None:
             return df
         df = df_from_csv('data/zillow.csv')
+        prepped_flag = True
     if df is None:
         #acquire zillow data from MySQL and caches to data/zillow.csv
         df = get_zillow_from_sql()
         df.to_csv('data/zillow.csv',index_label=False)
+        prepped_flag = True
  # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
     df = df[df.bed_count > 0]
     df = df[df.bath_count > 0]
@@ -79,14 +83,30 @@ def wrangle_zillow(refresh=False)->pd.DataFrame:
     #set bath_count to be half_bath_count
     df.bath_count = (df.bath_count-df.full_baths) * 2
     df = df.rename(columns={'bath_count':'half_baths'})
-    # df.half_baths = df.half_baths.astype(int)
     df.full_baths = df.full_baths.astype(int)
     df.half_baths = df.half_baths.astype(int)
     df.bed_count = df.bed_count.astype(int)
     df.year_built = df.year_built.astype(int)
     df.fips = df.fips.astype(int)
-    
+    #Manually handle outliers
+    df = df[df.bed_count < 6]
+    df = df[df.full_baths < 6]
+    df = df[df.tax_value < 10000000]
+    if prepped_flag:
+        df.to_csv('data/prepared_zillow.csv')
+
     return df
+def tvt_split(df:pd.DataFrame,stratify:str = None,tv_split:float = .2,validate_split:float= .3,sample:float = None):
+    '''tvt_split takes a pandas DataFrame, a string specifying the variable to stratify over,
+    as well as 2 floats where 0< f < 1 and returns a train, validate, and test split of the DataFame,
+    split by tv_split initially and validate_split thereafter. '''
+    train_validate, test = train_test_split(df,test_size=tv_split,random_state=123,stratify=stratify)
+    train, validate = train_test_split(train_validate,test_size=validate_split,random_state=123,stratify=stratify)
+    if sample is not None:
+        train = train.sample(frac=sample)
+        validate = validate.sample(frac=sample)
+        test = test.sample(frac=sample)
+    return train,validate,test
 if __name__ == "__main__":
     df = wrangle_zillow()
     print(df.info())
