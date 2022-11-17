@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
+import enum
 def get_zillow_url()->str:
     '''
     returns URL for `zillow` database.
@@ -47,7 +48,12 @@ def df_from_csv(path:str)->Union[pd.DataFrame,None]:
         return pd.read_csv(path)
     else:
         return None
-def wrangle_zillow(refresh=False)->pd.DataFrame:
+class RefreshType(enum.Flag):
+    SQL = enum.auto()
+    Reprepare = enum.auto()
+    none = enum.auto()
+    
+def wrangle_zillow(flag:str='none')->pd.DataFrame:
     '''
     wrangles Zillow data from either a MySQL query or a `.csv` file, prepares the  (if necessary), and returns a `pandas.DataFrame` object
     containing the prepared Zillow data. If data is acquired from MySQL, return `DataFrame` is also encoded to `.csv` in both prepared and
@@ -59,21 +65,31 @@ def wrangle_zillow(refresh=False)->pd.DataFrame:
     '''
     #aquire Zillow data from .csv if exists
     df = None
-    prepped_flag = False
-    if not refresh:
+    if flag.lower() == 'none':
         df = df_from_csv('data/prepared_zillow.csv')
         if df is not None:
             return df
+    if flag != 'sql':
         df = df_from_csv('data/zillow.csv')
-        prepped_flag = True
     if df is None:
         #acquire zillow data from MySQL and caches to data/zillow.csv
         df = get_zillow_from_sql()
         df.to_csv('data/zillow.csv',index_label=False)
-        prepped_flag = True
- # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
+    df = prep_zillow(df)
+    df.to_csv('data/prepared_zillow.csv',index_label=False)
+
+    return df
+def prep_zillow(df:pd.DataFrame)->pd.DataFrame:
+    '''prepares zillow data set for modeling
+    ## Parameters
+    df: `DataFrame` containing zillow data set
+    ## Returns
+    prepared Zillow DataFrame
+    '''
+     # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
     df = df[df.bed_count > 0]
     df = df[df.bath_count > 0]
+    df = df.drop_duplicates()
     df = df.dropna(subset=['tax_value','calc_sqft','year_built'])
     # Fill values where full_bath is NaN with number of whole baths
     # Done because none of these houses have 3/4 baths, and no information is available on full baths
@@ -81,19 +97,17 @@ def wrangle_zillow(refresh=False)->pd.DataFrame:
     na_bath = df[df.full_baths.isna()].index
     df.iloc[na_bath,3] = np.floor(df.iloc[na_bath,2])
     #set bath_count to be half_bath_count
-    df.bath_count = (df.bath_count-df.full_baths) * 2
-    df = df.rename(columns={'bath_count':'half_baths'})
+    df['half_baths'] = (df.bath_count-df.full_baths) * 2
     df.full_baths = df.full_baths.astype(int)
     df.half_baths = df.half_baths.astype(int)
     df.bed_count = df.bed_count.astype(int)
     df.year_built = df.year_built.astype(int)
     df.fips = df.fips.astype(int)
-    #Manually handle outliers
-    df = df[df.bed_count < 6]
-    df = df[df.full_baths < 6]
+    #discard outliers
     df = df[df.tax_value < 10000000]
-    if prepped_flag:
-        df.to_csv('data/prepared_zillow.csv')
+    df = df[df.bed_count <9]
+    df = df[df.bath_count < 8]
+    df = df[df.half_baths < 3] 
 
     return df
 def tvt_split(df:pd.DataFrame,stratify:str = None,tv_split:float = .2,validate_split:float= .3,sample:float = None):
