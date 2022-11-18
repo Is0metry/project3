@@ -8,6 +8,7 @@ import typing
 def plot_residuals(y_true:pd.Series,y_pred:pd.Series)->None:
     res = get_residuals(y_true,y_pred)
     sns.scatterplot(data=res,x='actual',y='residual')
+    plt.axhline(0,0,1)
     plt.show()
 def get_residuals(y_true:pd.Series,y_pred:typing.Union[pd.Series,float]):
     ret_frame = pd.DataFrame()
@@ -17,7 +18,7 @@ def get_residuals(y_true:pd.Series,y_pred:typing.Union[pd.Series,float]):
     return ret_frame
 def sum_of_squared_errors(y_true:pd.Series,y_pred:typing.Union[pd.Series,float]):
     ret_frame = get_residuals(y_true,y_pred)
-    sse = sum(ret_frame.residual_squared)
+    sse = sum(ret_frame.residual)
     return sse
 def explained_sum_of_sqrd(y_true:pd.Series,y_pred:pd.Series):
     return sum((y_pred - y_true.mean())**2)
