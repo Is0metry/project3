@@ -30,7 +30,9 @@ def get_zillow_from_sql()->pd.DataFrame:
         fullbathcnt AS full_baths,
         calculatedfinishedsquarefeet AS calc_sqft,
         yearbuilt AS year_built,
-        fips
+        fips,
+        latitude,
+        longitude
         FROM properties_2017
         JOIN predictions_2017 USING(parcelid)
         JOIN propertylandusetype USING(propertylandusetypeid)
@@ -86,11 +88,12 @@ def prep_zillow(df:pd.DataFrame)->pd.DataFrame:
     ## Returns
     prepared Zillow DataFrame
     '''
+    #drop na values
+    df = df.dropna(subset=['year_built','fips','tax_value','calc_sqft'])
      # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
     df = df[df.bed_count > 0]
     df = df[df.bath_count > 0]
     df = df.drop_duplicates()
-    df = df.dropna(subset=['tax_value','calc_sqft','year_built'])
     # Fill values where full_bath is NaN with number of whole baths
     # Done because none of these houses have 3/4 baths, and no information is available on full baths
     df = df.reset_index(drop=True)
@@ -104,10 +107,11 @@ def prep_zillow(df:pd.DataFrame)->pd.DataFrame:
     df.year_built = df.year_built.astype(int)
     df.fips = df.fips.astype(int)
     #discard outliers
-    df = df[df.tax_value < 10000000]
+    df = df[df.tax_value < 3500000]
     df = df[df.bed_count <9]
     df = df[df.bath_count < 8]
-    df = df[df.half_baths < 3] 
+    df = df[df.half_baths != df.half_baths.max()]
+    df.reset_index(drop=True)
 
     return df
 def tvt_split(df:pd.DataFrame,stratify:str = None,tv_split:float = .2,validate_split:float= .3,sample:float = None):
@@ -121,6 +125,7 @@ def tvt_split(df:pd.DataFrame,stratify:str = None,tv_split:float = .2,validate_s
         validate = validate.sample(frac=sample)
         test = test.sample(frac=sample)
     return train,validate,test
+
 if __name__ == "__main__":
     df = wrangle_zillow()
     print(df.info())
