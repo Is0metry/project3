@@ -120,21 +120,23 @@ def evaluate_models(xtrain:ModelDataType,ytrain:ModelDataType,\
 
     `ModelType` which performed the best against both data sets (LASSO+LARS)
     '''
-    ptrain_linreg, linreg = linear_regression(xtrain,ytrain)
-    pvalid_linreg, _ = linear_regression(xvalid,yvalid,linreg)
-    ptrain_llars,llars = lasso_lars(xtrain,ytrain)
-    pvalid_llars,_ = lasso_lars(xvalid,yvalid,llars)
-    ptrain_lgm, tweedie = lgm(xtrain,ytrain)
-    pvalid_lgm,_ = lgm(xvalid,yvalid,tweedie)
+    linreg_pred = dict()
+    llars_pred = dict()
+    glm_pred = dict()
+    linreg_pred['train'], linreg = linear_regression(xtrain,ytrain)
+    linreg_pred['validate'], _ = linear_regression(xvalid,yvalid,linreg)
+    llars_pred['train'],llars = lasso_lars(xtrain,ytrain)
+    llars_pred['validate'],_ = lasso_lars(xvalid,yvalid,llars)
+    glm_pred['train'], tweedie = lgm(xtrain,ytrain)
+    glm_pred['validate'],_ = lgm(xvalid,yvalid,tweedie)
     ytrue = {'train':ytrain,'validate':yvalid}
-    btrain = np.full_like(np.arange(xtrain.shape[0],dtype=int),ytrain.tax_value.mean())
-    bvalid = np.full_like(np.arange(xvalid.shape[0],dtype=int),ytrain.tax_value.mean())
-    linreg_pred = {'train':ptrain_linreg,'validate':pvalid_linreg}
-    llars_pred = {'train':ptrain_llars,'validate':pvalid_llars}
-    lgm_pred = {'train':ptrain_lgm,'validate':pvalid_lgm}
-    baseline_pred = {'train':btrain,'validate':bvalid}
+    baseline_pred = dict()
+    baseline_pred['train'] = np.full_like(\
+        np.arange(xtrain.shape[0],dtype=int),ytrain.tax_value.mean())
+    baseline_pred['validate'] = np.full_like(\
+        np.arange(xvalid.shape[0],dtype=int),ytrain.tax_value.mean())
     evaluation_matrix = rmse_eval(ytrue,baseline=baseline_pred,linear_regression=linreg_pred,\
-        lasso_lars=llars_pred,lgm=lgm_pred)
+        lasso_lars=llars_pred,glm=glm_pred)
     evaluation_matrix.index= ['Baseline','Linear Regression','LASSO LARS','General Linear Model']
     evaluation_matrix.columns = ['Train RMSE','Validate RMSE']
     return md('| Methodology' + evaluation_matrix.to_markdown()[1:]),llars
