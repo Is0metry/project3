@@ -1,19 +1,16 @@
-'''model contains helper funmctions to assist in Modeling portion of final_report.ipynb'''
-import typing as t
+'''model contains helper functions to assist in Modeling portion of final_report.ipynb'''
+from typing import Union,Tuple,Dict
 
-import evaluate as e
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from IPython.display import Markdown as md
-from numpy.typing import ArrayLike
 from sklearn.linear_model import LassoLars, LinearRegression, TweedieRegressor
 from sklearn.metrics import mean_squared_error
 
-DataType = t.Union[ArrayLike, pd.Series,pd.DataFrame]
-PandasDataType = t.Union[pd.Series,pd.DataFrame]
-ModelType = t.Union[LinearRegression,LassoLars,TweedieRegressor]
+import evaluate as ev
+from custom_dtypes import LinearRegressionType, ModelDataType
+
+
 def select_baseline(ytrain:pd.Series)->md:
     '''tests mean and median of training data as a baseline metric.
     ## Parameters
@@ -23,14 +20,14 @@ def select_baseline(ytrain:pd.Series)->md:
     '''
     med_base = ytrain.median()
     mean_base = ytrain.mean()
-    mean_eval = e.regression_errors(ytrain,mean_base,'Mean Baseline')
-    med_eval = e.regression_errors(ytrain,med_base,'Median Baseline')
+    mean_eval = ev.regression_errors(ytrain,mean_base,'Mean Baseline')
+    med_eval = ev.regression_errors(ytrain,med_base,'Median Baseline')
     ret_md = pd.concat([mean_eval,med_eval]).to_markdown()
     ret_md += '\n### Because mean outperformed median on all metrics, \
         we will use mean as our baseline'
     return md(ret_md)
 def linear_regression(x:pd.DataFrame,y:pd.DataFrame,\
-    linreg:t.Union[LinearRegression,None]=None)->None:
+    linreg:Union[LinearRegression,None]=None)->None:
     '''runs linear regression on x and y
     ## Parameters
     x: DataFrame of features
@@ -49,8 +46,8 @@ def linear_regression(x:pd.DataFrame,y:pd.DataFrame,\
         linreg.fit(x,y)
     ypred = linreg.predict(x)
     return ypred,linreg
-def lasso_lars(x:pd.DataFrame,y:pd.DataFrame,llars:t.Union[None,LassoLars] = None)\
-    ->t.Tuple[np.array,LassoLars]:
+def lasso_lars(x:pd.DataFrame,y:pd.DataFrame,llars:Union[None,LassoLars] = None)\
+    ->Tuple[np.array,LassoLars]:
     '''runs LASSO+LARS on x and y
     ## Parameters
     x: Dataframe of features
@@ -68,8 +65,8 @@ def lasso_lars(x:pd.DataFrame,y:pd.DataFrame,llars:t.Union[None,LassoLars] = Non
         llars.fit(x,y)
     ypred = llars.predict(x)
     return ypred,llars
-def lgm(x:pd.DataFrame,y:pd.DataFrame, tweedie:t.Union[TweedieRegressor,None] = None)\
-    ->t.Tuple[np.array,TweedieRegressor]:
+def lgm(x:pd.DataFrame,y:pd.DataFrame, tweedie:Union[TweedieRegressor,None] = None)\
+    ->Tuple[np.array,TweedieRegressor]:
     '''runs Generalized Linear Model (GLM) on x and y
     ## Parameters
     x: `DataFrame` of features
@@ -87,7 +84,7 @@ def lgm(x:pd.DataFrame,y:pd.DataFrame, tweedie:t.Union[TweedieRegressor,None] = 
         tweedie.fit(x,y)
     ypred = tweedie.predict(x)
     return ypred, tweedie
-def rmse_eval(ytrue:t.Dict[str,np.array],**kwargs)->pd.DataFrame:
+def rmse_eval(ytrue:Dict[str,np.array],**kwargs)->pd.DataFrame:
     '''
     performs Root Mean Squared evaluation on parameters
     ## Parameters
@@ -103,8 +100,8 @@ def rmse_eval(ytrue:t.Dict[str,np.array],**kwargs)->pd.DataFrame:
         for k_key,v_value in value.items():
             ret_df.loc[key,k_key] = np.round(np.sqrt(mean_squared_error(ytrue[k_key],v_value)),2)
     return ret_df
-def evaluate_models(xtrain:pd.DataFrame,ytrain:pd.DataFrame,\
-    xvalid:pd.DataFrame,yvalid:pd.DataFrame)->pd.DataFrame:
+def evaluate_models(xtrain:ModelDataType,ytrain:ModelDataType,\
+    xvalid:ModelDataType,yvalid:ModelDataType)->pd.DataFrame:
     '''
     Performs LASSO+LARS, Linear Regression, and Generalized Linear Model regression
         on train and validate data sets provided
@@ -141,7 +138,7 @@ def evaluate_models(xtrain:pd.DataFrame,ytrain:pd.DataFrame,\
     evaluation_matrix.index= ['Baseline','Linear Regression','LASSO LARS','General Linear Model']
     evaluation_matrix.columns = ['Train RMSE','Validate RMSE']
     return md('| Methodology' + evaluation_matrix.to_markdown()[1:]),llars
-def run_test(model:ModelType,xtest:pd.DataFrame,ytest:pd.DataFrame)->md:
+def run_test(model:LinearRegressionType,xtest:ModelDataType,ytest:ModelDataType)->md:
     '''
     Runs best performing regression model on test data set.
     ## Parameters
@@ -156,34 +153,7 @@ def run_test(model:ModelType,xtest:pd.DataFrame,ytest:pd.DataFrame)->md:
         of predictions on test data set.
     '''
     ypred = model.predict(xtest)
-    plot_residuals(ytest.tax_value,ypred)
+    ev.plot_residuals(ytest.tax_value,ypred)
     return md('### Mean Squared Error: ' + \
         str(np.round(np.sqrt(mean_squared_error(ytest,ypred)),2)))
-
-def get_residuals(y_true:pd.Series,y_pred:t.Union[pd.Series,float]):
-    '''
-    gets residuals and residual squared values for ytrue and ypred
-    ## Parameters
-    y_true: `pandas.DataFrame
-    ## Returns
-    `pandas.DataFrame` of actual value, residual, and residual squared.
-    '''
-    ret_frame = pd.DataFrame()
-    ret_frame['actual'] = y_true
-    ret_frame['residual'] = y_true - y_pred
-    ret_frame['residual_squared'] = ret_frame.residual ** 2
-    return ret_frame
-
-def plot_residuals(y_true:DataType,y_pred:DataType)->None:
-    '''
-    Plots the residuals of y_pred vs y_true
-    ## Parameters
-    y_true: `DataType` of true y values.
-    y_pred: `DataType` of predicted y values.
-    ## Returns
-    None
-    '''
-    res = get_residuals(y_true,y_pred)
-    sns.scatterplot(data=res,x='actual',y='residual')
-    plt.axhline(0,0,1)
-    plt.show()
+        
