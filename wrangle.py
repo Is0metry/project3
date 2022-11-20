@@ -56,8 +56,8 @@ def df_from_csv(path: str) -> Union[pd.DataFrame, None]:
     '''
     if os.path.exists(path):
         return pd.read_csv(path)
-    else:
-        return None
+
+    return None
 
 
 def wrangle_zillow(from_sql: bool = False, from_csv: bool = False) -> pd.DataFrame:
@@ -103,6 +103,7 @@ def prep_zillow(zillow_df: pd.DataFrame) -> pd.DataFrame:
     # drop any houses with 0 beds or 0 baths. That's not a house, that's a shed.
     zillow_df = zillow_df[zillow_df.bed_count > 0]
     zillow_df = zillow_df[zillow_df.bath_count > 0]
+    zillow_df = zillow_df[zillow_df.tax_value > 25000]
     zillow_df = zillow_df.drop_duplicates()
     # Fill values where full_bath is NaN with number of whole baths
     # Done because none of these houses have 3/4 baths,
@@ -123,7 +124,8 @@ def prep_zillow(zillow_df: pd.DataFrame) -> pd.DataFrame:
     zillow_df = zillow_df[zillow_df.half_baths != zillow_df.half_baths.max()]
     zillow_df = zillow_df.drop(columns=['bath_count'])
     zillow_df.reset_index(drop=True)
-
+    dummy_df = pd.get_dummies(zillow_df.fips,prefix='fips')
+    zillow_df = pd.concat([zillow_df,dummy_df],axis=1)
     return zillow_df
 
 
@@ -161,7 +163,7 @@ def get_scaled_copy(dframe: pd.DataFrame, x: List[str], scaled_data: np.ndarray)
 
 
 def scale_data(train: pd.DataFrame, validate: pd.DataFrame, test: pd.DataFrame,
-               x: List[str], scaler: callable = RobustScaler) ->\
+               x: List[str]) ->\
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     scales `train`,`validate`, and `test` data using a `method`
@@ -177,7 +179,8 @@ def scale_data(train: pd.DataFrame, validate: pd.DataFrame, test: pd.DataFrame,
     xtrain = train[x]
     xvalid = validate[x]
     xtest = test[x]
-    scaler = scaler.fit(xtrain)
+    scaler = RobustScaler()
+    scaler.fit(xtrain)
     scale_train = scaler.transform(xtrain)
     scale_valid = scaler.transform(xvalid)
     scale_test = scaler.transform(xtest)
