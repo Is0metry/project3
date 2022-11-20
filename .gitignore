@@ -3,6 +3,6 @@ env.py
 __pycache__/*
 data/*
 .DS_STORE
-wip_*
+wip*
 scaling.ipynb
 .pylintrc
