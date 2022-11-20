@@ -164,7 +164,7 @@ def get_scaled_copy(dframe: pd.DataFrame, x: List[str], scaled_data: np.ndarray)
 
 def scale_data(train: pd.DataFrame, validate: pd.DataFrame, test: pd.DataFrame,
                x: List[str]) ->\
-        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        Tuple[RobustScaler,pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     scales `train`,`validate`, and `test` data using a `method`
     ## Parameters
@@ -187,7 +187,7 @@ def scale_data(train: pd.DataFrame, validate: pd.DataFrame, test: pd.DataFrame,
     ret_train = get_scaled_copy(train, x, scale_train)
     ret_valid = get_scaled_copy(validate, x, scale_valid)
     ret_test = get_scaled_copy(test, x, scale_test)
-    return ret_train, ret_valid, ret_test
+    return scaler, ret_train, ret_valid, ret_test
 
 
 if __name__ == "__main__":
