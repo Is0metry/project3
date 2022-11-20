@@ -20,9 +20,10 @@ def p_to_md(p:float,alpha:float=.05,**kwargs)->md:
     ret_str = ''
     p_flag = p < alpha
     for k,v in kwargs.items():
-        ret_str += f'{k} = {v}\n\n'
+        ret_str += f'## {k} = {v}\n\n'
     ret_str += f'## Because $\\alpha$ {">" if p_flag else "<"} p,' + \
         f'we {"failed to " if ~(p_flag) else ""} reject $H_0$'
+    return md(ret_str)
 def t_to_md(p:float,t:float,alpha:float=.05,**kwargs):
     '''takes a p-value, alpha, and any T-test arguments and
     creates a Markdown object with the information.
@@ -67,7 +68,7 @@ def plot_1(train:pd.DataFrame)->None:
     ## Returns
     None
     '''
-    sns.lmplot(data=train,x='calc_sqft',y='tax_value',scatter_kws={'color':'#37659E'},line_kws=\
+    sns.lmplot(data=train,x='calc_sqft',y='tax_value',scatter_kws={'color':'#40b7ad'},line_kws=\
     {'color':'#2E1F3B'})
     plt.show()
 
@@ -110,6 +111,7 @@ def obligatory_pie_chart(train:pd.DataFrame)-> None:
     '''
     fips = train.fips.value_counts().sort_values()
     plt.pie(fips,autopct='%1.0f',colors=['#2E1F3B','#348EA7','#8CDAB2'])
+    plt.title('FIPS code in training data')
     plt.legend(train.fips.unique())
     plt.show()
 def fips_graph(train:pd.DataFrame)->None:
@@ -120,7 +122,10 @@ def fips_graph(train:pd.DataFrame)->None:
     ## Returns
     None
     '''
-    sns.histplot(data=train,x='tax_value',y='fips',hue='fips')
+    sns.barplot(data=train,x='fips',y='tax_value',palette='mako')
+    plt.xlabel('FIPS Code')
+    plt.ylabel('Tax Value')
+    plt.title('Avg. Tax Value by FIPS code')
     plt.show()
 
 def bedrooms_v_tax_value(train:pd.DataFrame)->None:
@@ -140,4 +145,5 @@ def year_v_tax_value(train:pd.DataFrame)-> None:
     ## Returns
     None
     '''
-    sns.lmplot(data=train,x='year_built',y='tax_value',line_kws={'color':'black'})
+    sns.lmplot(data=train,x='year_built',y='tax_value',line_kws={'color':'#2e1e3b'},\
+        scatter_kws={'color':'#40b7ad'})
