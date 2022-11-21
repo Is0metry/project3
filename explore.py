@@ -70,6 +70,9 @@ def plot_1(train:pd.DataFrame)->None:
     '''
     sns.lmplot(data=train,x='calc_sqft',y='tax_value',scatter_kws={'color':'#40b7ad'},line_kws=\
     {'color':'#2E1F3B'})
+    plt.xlabel('Calculated Square Feet')
+    plt.ylabel('Tax Value')
+    plt.title('Calculated Square Feet vs. Tax Value')
     plt.show()
 
 def levene_test(train:pd.DataFrame)->md:
@@ -147,3 +150,6 @@ def year_v_tax_value(train:pd.DataFrame)-> None:
     '''
     sns.lmplot(data=train,x='year_built',y='tax_value',line_kws={'color':'#2e1e3b'},\
         scatter_kws={'color':'#40b7ad'})
+    plt.title('Year Built vs. Tax Value')
+    plt.xlabel('Year Built')
+    plt.ylabel('Tax Value')
