@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import mean_squared_error
 
-from custom_dtypes import ModelDataType
+from custom_dtypes import ModelDataType,lmplot_kwargs
 
 
 def get_residuals(y_true:ModelDataType,y_pred:Union[ModelDataType,float])->pd.DataFrame:
@@ -34,8 +34,8 @@ def plot_residuals(y_true:pd.Series,y_pred:pd.Series)->None:
     None
     '''
     res = get_residuals(y_true,y_pred)
-    sns.scatterplot(data=res,x='actual',y='residual',palette='mako')
-    plt.axhline(0,color='#8CDAB2')
+    sns.scatterplot(data=res,x='actual',y='residual',color=lmplot_kwargs['scatter']['color'])
+    plt.axhline(0,color=lmplot_kwargs['line']['color'])
     plt.show()
 def sum_of_squared_errors(y_true:ModelDataType,y_pred:Union[ModelDataType,float])->float:
     '''

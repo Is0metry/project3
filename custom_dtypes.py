@@ -8,3 +8,4 @@ from sklearn.linear_model import LassoLars, LinearRegression, TweedieRegressor
 ModelDataType = t.Union[ArrayLike,pd.DataFrame,pd.Series]
 LinearRegressionType = t.Union[LinearRegression,LassoLars,TweedieRegressor]
 PandasDataType = t.Union[pd.Series,pd.DataFrame]
+lmplot_kwargs = {'scatter':{'color':'#40b7ad'},'line':{'color':'#2e1e3b'}}

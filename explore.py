@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 from IPython.display import Markdown as md
 from scipy.stats import kruskal, levene, spearmanr
-
+from custom_dtypes import lmplot_kwargs
 
 def p_to_md(p:float,alpha:float=.05,**kwargs)->md:
     '''
@@ -60,6 +60,12 @@ def tax_sqft_test(train:pd.DataFrame,alpha:float=0.05)->md:
     y = train.tax_value
     r,p = spearmanr(x,y)
     return p_to_md(p,alpha,r=r)
+def bath_v_tax(train:pd.DataFrame)->None:
+    sns.barplot(data=train,x='full_baths',y='tax_value',palette='mako')
+    plt.title('Full Baths vs Price')
+    plt.xlabel('No. Full Baths')
+    plt.ylabel('Tax Value')
+    plt.show()
 def plot_1(train:pd.DataFrame)->None:
     '''
     plots Calculated Square Feet vs Tax Value as well as a regression line.
@@ -68,8 +74,8 @@ def plot_1(train:pd.DataFrame)->None:
     ## Returns
     None
     '''
-    sns.lmplot(data=train,x='calc_sqft',y='tax_value',scatter_kws={'color':'#40b7ad'},line_kws=\
-    {'color':'#2E1F3B'})
+    sns.lmplot(data=train,x='calc_sqft',y='tax_value',scatter_kws=lmplot_kwargs['scatter'],line_kws=\
+    lmplot_kwargs['line'])
     plt.xlabel('Calculated Square Feet')
     plt.ylabel('Tax Value')
     plt.title('Calculated Square Feet vs. Tax Value')
@@ -148,8 +154,8 @@ def year_v_tax_value(train:pd.DataFrame)-> None:
     ## Returns
     None
     '''
-    sns.lmplot(data=train,x='year_built',y='tax_value',line_kws={'color':'#2e1e3b'},\
-        scatter_kws={'color':'#40b7ad'})
+    sns.lmplot(data=train,x='year_built',y='tax_value',line_kws=lmplot_kwargs['line'],\
+        scatter_kws=lmplot_kwargs['scatter'])
     plt.title('Year Built vs. Tax Value')
     plt.xlabel('Year Built')
     plt.ylabel('Tax Value')
